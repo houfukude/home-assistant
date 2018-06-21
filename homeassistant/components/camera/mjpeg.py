@@ -42,7 +42,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 
 @asyncio.coroutine
-# pylint: disable=unused-argument
 def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     """Set up a MJPEG IP Camera."""
     if discovery_info:
@@ -119,6 +118,8 @@ class MjpegCamera(Camera):
         else:
             req = requests.get(self._mjpeg_url, stream=True, timeout=10)
 
+        # https://github.com/PyCQA/pylint/issues/1437
+        # pylint: disable=no-member
         with closing(req) as response:
             return extract_image_from_mjpeg(response.iter_content(102400))
 

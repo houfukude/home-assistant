@@ -17,7 +17,6 @@ _LOGGER = logging.getLogger(__name__)
 DEPENDENCIES = ['lutron']
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the Lutron shades."""
     devs = []
@@ -63,7 +62,7 @@ class LutronCover(LutronDevice, CoverDevice):
 
     def update(self):
         """Call when forcing a refresh of the device."""
-        # Reading the property (rather than last_level()) fetchs value
+        # Reading the property (rather than last_level()) fetches value
         level = self._lutron_device.level
         _LOGGER.debug("Lutron ID: %d updated to %f",
                       self._lutron_device.id, level)

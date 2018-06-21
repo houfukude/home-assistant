@@ -17,7 +17,7 @@ from homeassistant.helpers import discovery
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
-REQUIREMENTS = ['pyatv==0.3.9']
+REQUIREMENTS = ['pyatv==0.3.10']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.All(ensure_list, [vol.Schema({
         vol.Required(CONF_HOST): cv.string,
         vol.Required(CONF_LOGIN_ID): cv.string,
-        vol.Optional(CONF_CREDENTIALS, default=None): cv.string,
+        vol.Optional(CONF_CREDENTIALS): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_START_OFF, default=False): cv.boolean,
     })])

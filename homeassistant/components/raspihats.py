@@ -4,6 +4,7 @@ Support for controlling raspihats boards.
 For more details about this component, please refer to the documentation at
 https://home-assistant.io/components/raspihats/
 """
+# pylint: disable=import-error,no-name-in-module
 import logging
 import threading
 import time
@@ -33,7 +34,6 @@ I2C_HAT_NAMES = [
 I2C_HATS_MANAGER = 'I2CH_MNG'
 
 
-# pylint: disable=unused-argument
 def setup(hass, config):
     """Set up the raspihats component."""
     hass.data[I2C_HATS_MANAGER] = I2CHatsManager()
@@ -143,7 +143,6 @@ class I2CHatsManager(threading.Thread):
 
     def run(self):
         """Keep alive for I2C-HATs."""
-        # pylint: disable=import-error
         from raspihats.i2c_hats import ResponseException
 
         _LOGGER.info(log_message(self, "starting"))
@@ -206,7 +205,6 @@ class I2CHatsManager(threading.Thread):
 
     def read_di(self, address, channel):
         """Read a value from a I2C-HAT digital input."""
-        # pylint: disable=import-error
         from raspihats.i2c_hats import ResponseException
 
         with self._lock:
@@ -219,7 +217,6 @@ class I2CHatsManager(threading.Thread):
 
     def write_dq(self, address, channel, value):
         """Write a value to a I2C-HAT digital output."""
-        # pylint: disable=import-error
         from raspihats.i2c_hats import ResponseException
 
         with self._lock:
@@ -231,7 +228,6 @@ class I2CHatsManager(threading.Thread):
 
     def read_dq(self, address, channel):
         """Read a value from a I2C-HAT digital output."""
-        # pylint: disable=import-error
         from raspihats.i2c_hats import ResponseException
 
         with self._lock:

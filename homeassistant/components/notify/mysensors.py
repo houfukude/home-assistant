@@ -9,12 +9,12 @@ from homeassistant.components.notify import (
     ATTR_TARGET, DOMAIN, BaseNotificationService)
 
 
-def get_service(hass, config, discovery_info=None):
+async def async_get_service(hass, config, discovery_info=None):
     """Get the MySensors notification service."""
     new_devices = mysensors.setup_mysensors_platform(
         hass, DOMAIN, discovery_info, MySensorsNotificationDevice)
     if not new_devices:
-        return
+        return None
     return MySensorsNotificationService(hass)
 
 
@@ -36,13 +36,11 @@ class MySensorsNotificationDevice(mysensors.MySensorsDevice):
 class MySensorsNotificationService(BaseNotificationService):
     """Implement a MySensors notification service."""
 
-    # pylint: disable=too-few-public-methods
-
     def __init__(self, hass):
         """Initialize the service."""
         self.devices = mysensors.get_mysensors_devices(hass, DOMAIN)
 
-    def send_message(self, message="", **kwargs):
+    async def async_send_message(self, message="", **kwargs):
         """Send a message to a user."""
         target_devices = kwargs.get(ATTR_TARGET)
         devices = [device for device in self.devices.values()

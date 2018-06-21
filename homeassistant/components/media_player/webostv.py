@@ -9,6 +9,9 @@ from datetime import timedelta
 import logging
 from urllib.parse import urlparse
 
+# pylint: disable=unused-import
+from typing import Dict  # noqa: F401
+
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
@@ -23,7 +26,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.script import Script
 import homeassistant.util as util
 
-REQUIREMENTS = ['pylgtv==0.1.7', 'websockets==3.2', 'wakeonlan==0.2.2']
+REQUIREMENTS = ['pylgtv==0.1.7', 'websockets==3.2']
 
 _CONFIGURING = {}  # type: Dict[str, str]
 _LOGGER = logging.getLogger(__name__)
@@ -32,6 +35,7 @@ CONF_SOURCES = 'sources'
 CONF_ON_ACTION = 'turn_on_action'
 
 DEFAULT_NAME = 'LG webOS Smart TV'
+LIVETV_APP_ID = 'com.webos.app.livetv'
 
 WEBOSTV_CONFIG_FILE = 'webostv.conf'
 
@@ -57,7 +61,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the LG WebOS TV platform."""
     if discovery_info is not None:
@@ -135,7 +138,6 @@ def request_configuration(
             _CONFIGURING[host], 'Failed to pair, please try again.')
         return
 
-    # pylint: disable=unused-argument
     def lgtv_configuration_callback(data):
         """Handle actions when configuration callback is called."""
         setup_tv(host, name, customize, config, timeout, hass,
@@ -171,6 +173,7 @@ class LgWebOSDevice(MediaPlayerDevice):
         self._state = STATE_UNKNOWN
         self._source_list = {}
         self._app_list = {}
+        self._channel = None
 
     @util.Throttle(MIN_TIME_BETWEEN_SCANS, MIN_TIME_BETWEEN_FORCED_SCANS)
     def update(self):
@@ -186,10 +189,12 @@ class LgWebOSDevice(MediaPlayerDevice):
                 self._state = STATE_OFF
                 self._current_source = None
                 self._current_source_id = None
+                self._channel = None
 
             if self._state is not STATE_OFF:
                 self._muted = self._client.get_muted()
                 self._volume = self._client.get_volume()
+                self._channel = self._client.get_current_channel()
 
                 self._source_list = {}
                 self._app_list = {}
@@ -222,6 +227,7 @@ class LgWebOSDevice(MediaPlayerDevice):
             self._state = STATE_OFF
             self._current_source = None
             self._current_source_id = None
+            self._channel = None
 
     @property
     def name(self):
@@ -257,6 +263,13 @@ class LgWebOSDevice(MediaPlayerDevice):
     def media_content_type(self):
         """Content type of current playing media."""
         return MEDIA_TYPE_CHANNEL
+
+    @property
+    def media_title(self):
+        """Title of current playing media."""
+        if (self._channel is not None) and ('channelName' in self._channel):
+            return self._channel['channelName']
+        return None
 
     @property
     def media_image_url(self):
@@ -329,6 +342,39 @@ class LgWebOSDevice(MediaPlayerDevice):
             self._current_source = source_dict['label']
             self._client.set_input(source_dict['id'])
 
+    def play_media(self, media_type, media_id, **kwargs):
+        """Play a piece of media."""
+        _LOGGER.debug(
+            "Call play media type <%s>, Id <%s>", media_type, media_id)
+
+        if media_type == MEDIA_TYPE_CHANNEL:
+            _LOGGER.debug("Searching channel...")
+            partial_match_channel_id = None
+            perfect_match_channel_id = None
+
+            for channel in self._client.get_channels():
+                if media_id == channel['channelNumber']:
+                    perfect_match_channel_id = channel['channelId']
+                    continue
+                elif media_id.lower() == channel['channelName'].lower():
+                    perfect_match_channel_id = channel['channelId']
+                    continue
+                elif media_id.lower() in channel['channelName'].lower():
+                    partial_match_channel_id = channel['channelId']
+
+            if perfect_match_channel_id is not None:
+                _LOGGER.info(
+                    "Switching to channel <%s> with perfect match",
+                    perfect_match_channel_id)
+                self._client.set_channel(perfect_match_channel_id)
+            elif partial_match_channel_id is not None:
+                _LOGGER.info(
+                    "Switching to channel <%s> with partial match",
+                    partial_match_channel_id)
+                self._client.set_channel(partial_match_channel_id)
+
+            return
+
     def media_play(self):
         """Send play command."""
         self._playing = True
@@ -343,8 +389,16 @@ class LgWebOSDevice(MediaPlayerDevice):
 
     def media_next_track(self):
         """Send next track command."""
-        self._client.fast_forward()
+        current_input = self._client.get_input()
+        if current_input == LIVETV_APP_ID:
+            self._client.channel_up()
+        else:
+            self._client.fast_forward()
 
     def media_previous_track(self):
         """Send the previous track command."""
-        self._client.rewind()
+        current_input = self._client.get_input()
+        if current_input == LIVETV_APP_ID:
+            self._client.channel_down()
+        else:
+            self._client.rewind()

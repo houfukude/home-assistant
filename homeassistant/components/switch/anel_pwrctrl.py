@@ -15,9 +15,7 @@ from homeassistant.components.switch import (SwitchDevice, PLATFORM_SCHEMA)
 from homeassistant.const import (CONF_HOST, CONF_PASSWORD, CONF_USERNAME)
 from homeassistant.util import Throttle
 
-REQUIREMENTS = ['https://github.com/mweinelt/anel-pwrctrl/archive/'
-                'ed26e8830e28a2bfa4260a9002db23ce3e7e63d7.zip'
-                '#anel_pwrctrl==0.0.1']
+REQUIREMENTS = ['anel_pwrctrl-homeassistant==0.0.1.dev2']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -101,11 +99,11 @@ class PwrCtrlSwitch(SwitchDevice):
         """Trigger update for all switches on the parent device."""
         self._parent_device.update()
 
-    def turn_on(self):
+    def turn_on(self, **kwargs):
         """Turn the switch on."""
         self._port.on()
 
-    def turn_off(self):
+    def turn_off(self, **kwargs):
         """Turn the switch off."""
         self._port.off()
 

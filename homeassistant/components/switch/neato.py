@@ -1,14 +1,16 @@
 """
-Support for Neato Connected Vaccums switches.
+Support for Neato Connected Vacuums switches.
 
 For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/switch.neato/
 """
 import logging
+from datetime import timedelta
 import requests
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.helpers.entity import ToggleEntity
 from homeassistant.components.neato import NEATO_ROBOTS, NEATO_LOGIN
+from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +52,7 @@ class NeatoConnectedSwitch(ToggleEntity):
         self._schedule_state = None
         self._clean_state = None
 
+    @Throttle(timedelta(seconds=60))
     def update(self):
         """Update the states of Neato switches."""
         _LOGGER.debug("Running switch update")
@@ -68,7 +71,7 @@ class NeatoConnectedSwitch(ToggleEntity):
                 self._schedule_state = STATE_ON
             else:
                 self._schedule_state = STATE_OFF
-            _LOGGER.debug("Shedule state: %s", self._schedule_state)
+            _LOGGER.debug("Schedule state: %s", self._schedule_state)
 
     @property
     def name(self):

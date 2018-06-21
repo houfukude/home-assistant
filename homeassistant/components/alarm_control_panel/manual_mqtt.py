@@ -8,6 +8,7 @@ import asyncio
 import copy
 import datetime
 import logging
+import re
 
 import voluptuous as vol
 
@@ -208,9 +209,8 @@ class ManualMQTTAlarm(alarm.AlarmControlPanel):
                     trigger_time) < dt_util.utcnow():
                 if self._disarm_after_trigger:
                     return STATE_ALARM_DISARMED
-                else:
-                    self._state = self._previous_state
-                    return self._state
+                self._state = self._previous_state
+                return self._state
 
         if self._state in SUPPORTED_PENDING_STATES and \
                 self._within_pending_time(self._state):
@@ -223,8 +223,7 @@ class ManualMQTTAlarm(alarm.AlarmControlPanel):
         """Get the current state."""
         if self.state == STATE_ALARM_PENDING:
             return self._previous_state
-        else:
-            return self._state
+        return self._state
 
     def _pending_time(self, state):
         """Get the pending time."""
@@ -239,8 +238,12 @@ class ManualMQTTAlarm(alarm.AlarmControlPanel):
 
     @property
     def code_format(self):
-        """Return one or more characters."""
-        return None if self._code is None else '.+'
+        """Return one or more digits/characters."""
+        if self._code is None:
+            return None
+        elif isinstance(self._code, str) and re.search('^\\d+$', self._code):
+            return 'Number'
+        return 'Any'
 
     def alarm_disarm(self, code=None):
         """Send disarm command."""

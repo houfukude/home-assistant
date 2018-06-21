@@ -1,11 +1,11 @@
 """
-Support for Neato Connected Vaccums.
+Support for Neato Connected Vacuums.
 
 For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/vacuum.neato/
 """
 import logging
-
+from datetime import timedelta
 import requests
 
 from homeassistant.const import STATE_OFF, STATE_ON
@@ -15,6 +15,7 @@ from homeassistant.components.vacuum import (
     SUPPORT_MAP, ATTR_STATUS, ATTR_BATTERY_LEVEL, ATTR_BATTERY_ICON)
 from homeassistant.components.neato import (
     NEATO_ROBOTS, NEATO_LOGIN, NEATO_MAP_DATA, ACTION, ERRORS, MODE, ALERTS)
+from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,8 +24,6 @@ DEPENDENCIES = ['neato']
 SUPPORT_NEATO = SUPPORT_BATTERY | SUPPORT_PAUSE | SUPPORT_RETURN_HOME | \
                  SUPPORT_STOP | SUPPORT_TURN_OFF | SUPPORT_TURN_ON | \
                  SUPPORT_STATUS | SUPPORT_MAP
-
-ICON = 'mdi:roomba'
 
 ATTR_CLEAN_START = 'clean_start'
 ATTR_CLEAN_STOP = 'clean_stop'
@@ -64,6 +63,7 @@ class NeatoConnectedVacuum(VacuumDevice):
         self.clean_suspension_charge_count = None
         self.clean_suspension_time = None
 
+    @Throttle(timedelta(seconds=60))
     def update(self):
         """Update the states of Neato Vacuums."""
         _LOGGER.debug("Running Neato Vacuums update")
@@ -130,11 +130,6 @@ class NeatoConnectedVacuum(VacuumDevice):
     def name(self):
         """Return the name of the device."""
         return self._name
-
-    @property
-    def icon(self):
-        """Return the icon to use for device."""
-        return ICON
 
     @property
     def supported_features(self):

@@ -59,7 +59,6 @@ SOURCES = {0: 'TV / Antenna',
            8: 'PC_IN'}
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the Sharp Aquos TV platform."""
     import sharp_aquos_rc
@@ -104,7 +103,6 @@ def _retry(func):
     return wrapper
 
 
-# pylint: disable=abstract-method
 class SharpAquosTVDevice(MediaPlayerDevice):
     """Representation of a Aquos TV."""
 
@@ -201,9 +199,9 @@ class SharpAquosTVDevice(MediaPlayerDevice):
         self._remote.volume(int(self._volume * 60) - 2)
 
     @_retry
-    def set_volume_level(self, level):
+    def set_volume_level(self, volume):
         """Set Volume media player."""
-        self._remote.volume(int(level * 60))
+        self._remote.volume(int(volume * 60))
 
     @_retry
     def mute_volume(self, mute):

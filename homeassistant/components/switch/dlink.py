@@ -36,7 +36,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up a D-Link Smart Plug."""
     from pyW215.pyW215 import SmartPlug
@@ -117,7 +116,7 @@ class SmartPlugSwitch(SwitchDevice):
         """Turn the switch on."""
         self.data.smartplug.state = 'ON'
 
-    def turn_off(self):
+    def turn_off(self, **kwargs):
         """Turn the switch off."""
         self.data.smartplug.state = 'OFF'
 

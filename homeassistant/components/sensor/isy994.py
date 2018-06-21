@@ -49,7 +49,7 @@ UOM_FRIENDLY_NAME = {
     '33': 'kWH',
     '34': 'liedu',
     '35': 'l',
-    '36': 'lux',
+    '36': 'lx',
     '37': 'mercalli',
     '38': 'm',
     '39': 'm³/hr',
@@ -235,7 +235,6 @@ UOM_TO_STATES = {
 }
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config: ConfigType,
                    add_devices: Callable[[list], None], discovery_info=None):
     """Set up the ISY994 sensor platform."""
@@ -253,10 +252,6 @@ def setup_platform(hass, config: ConfigType,
 
 class ISYSensorDevice(ISYDevice):
     """Representation of an ISY994 sensor device."""
-
-    def __init__(self, node) -> None:
-        """Initialize the ISY994 sensor device."""
-        super().__init__(node)
 
     @property
     def raw_unit_of_measurement(self) -> str:
@@ -312,15 +307,6 @@ class ISYSensorDevice(ISYDevice):
 
 class ISYWeatherDevice(ISYDevice):
     """Representation of an ISY994 weather device."""
-
-    def __init__(self, node) -> None:
-        """Initialize the ISY994 weather device."""
-        super().__init__(node)
-
-    @property
-    def unique_id(self) -> str:
-        """Return the unique identifier for the node."""
-        return self._node.name
 
     @property
     def raw_units(self) -> str:

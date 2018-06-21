@@ -6,6 +6,7 @@ https://home-assistant.io/components/binary_sensor.mqtt/
 """
 import asyncio
 import logging
+from typing import Optional
 
 import voluptuous as vol
 
@@ -14,8 +15,8 @@ import homeassistant.components.mqtt as mqtt
 from homeassistant.components.binary_sensor import (
     BinarySensorDevice, DEVICE_CLASSES_SCHEMA)
 from homeassistant.const import (
-    CONF_NAME, CONF_VALUE_TEMPLATE, CONF_PAYLOAD_ON, CONF_PAYLOAD_OFF,
-    CONF_DEVICE_CLASS)
+    CONF_FORCE_UPDATE, CONF_NAME, CONF_VALUE_TEMPLATE, CONF_PAYLOAD_ON,
+    CONF_PAYLOAD_OFF, CONF_DEVICE_CLASS)
 from homeassistant.components.mqtt import (
     CONF_STATE_TOPIC, CONF_AVAILABILITY_TOPIC, CONF_PAYLOAD_AVAILABLE,
     CONF_PAYLOAD_NOT_AVAILABLE, CONF_QOS, MqttAvailability)
@@ -24,8 +25,10 @@ import homeassistant.helpers.config_validation as cv
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = 'MQTT Binary sensor'
+CONF_UNIQUE_ID = 'unique_id'
 DEFAULT_PAYLOAD_OFF = 'OFF'
 DEFAULT_PAYLOAD_ON = 'ON'
+DEFAULT_FORCE_UPDATE = False
 
 DEPENDENCIES = ['mqtt']
 
@@ -34,6 +37,10 @@ PLATFORM_SCHEMA = mqtt.MQTT_RO_PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_PAYLOAD_OFF, default=DEFAULT_PAYLOAD_OFF): cv.string,
     vol.Optional(CONF_PAYLOAD_ON, default=DEFAULT_PAYLOAD_ON): cv.string,
     vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
+    vol.Optional(CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE): cv.boolean,
+    # Integrations shouldn't never expose unique_id through configuration
+    # this here is an exception because MQTT is a msg transport, not a protocol
+    vol.Optional(CONF_UNIQUE_ID): cv.string,
 }).extend(mqtt.MQTT_AVAILABILITY_SCHEMA.schema)
 
 
@@ -53,11 +60,13 @@ def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
         config.get(CONF_AVAILABILITY_TOPIC),
         config.get(CONF_DEVICE_CLASS),
         config.get(CONF_QOS),
+        config.get(CONF_FORCE_UPDATE),
         config.get(CONF_PAYLOAD_ON),
         config.get(CONF_PAYLOAD_OFF),
         config.get(CONF_PAYLOAD_AVAILABLE),
         config.get(CONF_PAYLOAD_NOT_AVAILABLE),
-        value_template
+        value_template,
+        config.get(CONF_UNIQUE_ID),
     )])
 
 
@@ -65,8 +74,9 @@ class MqttBinarySensor(MqttAvailability, BinarySensorDevice):
     """Representation a binary sensor that is updated by MQTT."""
 
     def __init__(self, name, state_topic, availability_topic, device_class,
-                 qos, payload_on, payload_off, payload_available,
-                 payload_not_available, value_template):
+                 qos, force_update, payload_on, payload_off, payload_available,
+                 payload_not_available, value_template,
+                 unique_id: Optional[str]):
         """Initialize the MQTT binary sensor."""
         super().__init__(availability_topic, qos, payload_available,
                          payload_not_available)
@@ -77,7 +87,9 @@ class MqttBinarySensor(MqttAvailability, BinarySensorDevice):
         self._payload_on = payload_on
         self._payload_off = payload_off
         self._qos = qos
+        self._force_update = force_update
         self._template = value_template
+        self._unique_id = unique_id
 
     @asyncio.coroutine
     def async_added_to_hass(self):
@@ -94,6 +106,11 @@ class MqttBinarySensor(MqttAvailability, BinarySensorDevice):
                 self._state = True
             elif payload == self._payload_off:
                 self._state = False
+            else:  # Payload is not for this entity
+                _LOGGER.warning('No matching payload found'
+                                ' for entity: %s with state_topic: %s',
+                                self._name, self._state_topic)
+                return
 
             self.async_schedule_update_ha_state()
 
@@ -119,3 +136,13 @@ class MqttBinarySensor(MqttAvailability, BinarySensorDevice):
     def device_class(self):
         """Return the class of this sensor."""
         return self._device_class
+
+    @property
+    def force_update(self):
+        """Force update."""
+        return self._force_update
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return self._unique_id

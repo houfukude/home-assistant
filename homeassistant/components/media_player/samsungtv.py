@@ -8,6 +8,9 @@ import logging
 import socket
 from datetime import timedelta
 
+import sys
+
+import subprocess
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
@@ -20,7 +23,7 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt as dt_util
 
-REQUIREMENTS = ['samsungctl==0.6.0', 'wakeonlan==0.2.2']
+REQUIREMENTS = ['samsungctl[websocket]==0.7.1', 'wakeonlan==1.0.0']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +47,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the Samsung TV platform."""
     known_devices = hass.data.get(KNOWN_DEVICES_KEY)
@@ -89,13 +91,13 @@ class SamsungTVDevice(MediaPlayerDevice):
         """Initialize the Samsung device."""
         from samsungctl import exceptions
         from samsungctl import Remote
-        from wakeonlan import wol
+        import wakeonlan
         # Save a reference to the imported classes
         self._exceptions_class = exceptions
         self._remote_class = Remote
         self._name = name
         self._mac = mac
-        self._wol = wol
+        self._wol = wakeonlan
         # Assume that the TV is not muted
         self._muted = False
         # Assume that the TV is in Play mode
@@ -122,12 +124,19 @@ class SamsungTVDevice(MediaPlayerDevice):
 
     def update(self):
         """Update state of device."""
+        if sys.platform == 'win32':
+            _ping_cmd = ['ping', '-n 1', '-w', '1000', self._config['host']]
+        else:
+            _ping_cmd = ['ping', '-n', '-q', '-c1', '-W1',
+                         self._config['host']]
+
+        ping = subprocess.Popen(
+            _ping_cmd,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(self._config[CONF_TIMEOUT])
-            sock.connect((self._config['host'], self._config['port']))
-            self._state = STATE_ON
-        except socket.error:
+            ping.communicate()
+            self._state = STATE_ON if ping.returncode == 0 else STATE_OFF
+        except subprocess.CalledProcessError:
             self._state = STATE_OFF
 
     def get_remote(self):
@@ -145,16 +154,25 @@ class SamsungTVDevice(MediaPlayerDevice):
             _LOGGER.info("TV is powering off, not sending command: %s", key)
             return
         try:
-            self.get_remote().control(key)
+            # recreate connection if connection was dead
+            retry_count = 1
+            for _ in range(retry_count + 1):
+                try:
+                    self.get_remote().control(key)
+                    break
+                except (self._exceptions_class.ConnectionClosed,
+                        BrokenPipeError):
+                    # BrokenPipe can occur when the commands is sent to fast
+                    self._remote = None
             self._state = STATE_ON
         except (self._exceptions_class.UnhandledResponse,
-                self._exceptions_class.AccessDenied, BrokenPipeError):
+                self._exceptions_class.AccessDenied):
             # We got a response so it's on.
-            # BrokenPipe can occur when the commands is sent to fast
             self._state = STATE_ON
             self._remote = None
+            _LOGGER.debug("Failed sending command %s", key, exc_info=True)
             return
-        except (self._exceptions_class.ConnectionClosed, OSError):
+        except OSError:
             self._state = STATE_OFF
             self._remote = None
         if self._power_off_in_progress():
@@ -197,6 +215,7 @@ class SamsungTVDevice(MediaPlayerDevice):
         # Force closing of remote session to provide instant UI feedback
         try:
             self.get_remote().close()
+            self._remote = None
         except OSError:
             _LOGGER.debug("Could not establish connection.")
 

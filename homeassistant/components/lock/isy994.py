@@ -21,7 +21,6 @@ VALUE_TO_STATE = {
 }
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config: ConfigType,
                    add_devices: Callable[[list], None], discovery_info=None):
     """Set up the ISY994 lock platform."""
@@ -53,8 +52,7 @@ class ISYLockDevice(ISYDevice, LockDevice):
         """Get the state of the lock."""
         if self.is_unknown():
             return None
-        else:
-            return VALUE_TO_STATE.get(self.value, STATE_UNKNOWN)
+        return VALUE_TO_STATE.get(self.value, STATE_UNKNOWN)
 
     def lock(self, **kwargs) -> None:
         """Send the lock command to the ISY994 device."""

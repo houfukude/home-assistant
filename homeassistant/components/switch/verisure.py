@@ -60,18 +60,19 @@ class VerisureSmartplug(SwitchDevice):
             "$.smartPlugs[?(@.deviceLabel == '%s')]",
             self._device_label) is not None
 
-    def turn_on(self):
+    def turn_on(self, **kwargs):
         """Set smartplug status on."""
         hub.session.set_smartplug_state(self._device_label, True)
         self._state = True
         self._change_timestamp = time()
 
-    def turn_off(self):
+    def turn_off(self, **kwargs):
         """Set smartplug status off."""
         hub.session.set_smartplug_state(self._device_label, False)
         self._state = False
         self._change_timestamp = time()
 
+    # pylint: disable=no-self-use
     def update(self):
         """Get the latest date of the smartplug."""
         hub.update_overview()

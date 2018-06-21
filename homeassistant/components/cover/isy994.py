@@ -25,7 +25,6 @@ VALUE_TO_STATE = {
 }
 
 
-# pylint: disable=unused-argument
 def setup_platform(hass, config: ConfigType,
                    add_devices: Callable[[list], None], discovery_info=None):
     """Set up the ISY994 cover platform."""
@@ -42,10 +41,6 @@ def setup_platform(hass, config: ConfigType,
 class ISYCoverDevice(ISYDevice, CoverDevice):
     """Representation of an ISY994 cover device."""
 
-    def __init__(self, node: object):
-        """Initialize the ISY994 cover device."""
-        super().__init__(node)
-
     @property
     def current_cover_position(self) -> int:
         """Return the current cover position."""
@@ -61,8 +56,7 @@ class ISYCoverDevice(ISYDevice, CoverDevice):
         """Get the state of the ISY994 cover device."""
         if self.is_unknown():
             return None
-        else:
-            return VALUE_TO_STATE.get(self.value, STATE_OPEN)
+        return VALUE_TO_STATE.get(self.value, STATE_OPEN)
 
     def open_cover(self, **kwargs) -> None:
         """Send the open cover command to the ISY994 cover device."""
